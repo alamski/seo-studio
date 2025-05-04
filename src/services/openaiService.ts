@@ -2,14 +2,20 @@ import OpenAI from 'openai';
 
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-if (!apiKey) {
-  console.warn('OpenAI API key is missing. Please add VITE_OPENAI_API_KEY to your .env file');
-}
+let openai: OpenAI | null = null;
 
-const openai = new OpenAI({
-  apiKey,
-  dangerouslyAllowBrowser: true
-});
+try {
+  if (apiKey) {
+    openai = new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: true
+    });
+  } else {
+    console.warn('OpenAI API key is missing. Please add VITE_OPENAI_API_KEY to your .env file');
+  }
+} catch (error) {
+  console.error('Error initializing OpenAI client:', error);
+}
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -17,8 +23,8 @@ export interface Message {
 }
 
 export const sendMessage = async (messages: Message[]): Promise<string> => {
-  if (!apiKey) {
-    throw new Error('OpenAI API key is missing. Please add VITE_OPENAI_API_KEY to your .env file');
+  if (!openai) {
+    return 'OpenAI service is not initialized. Please check your API key.';
   }
 
   try {
@@ -35,6 +41,6 @@ export const sendMessage = async (messages: Message[]): Promise<string> => {
     return response.choices[0]?.message?.content || 'No response from AI';
   } catch (error) {
     console.error('Error sending message to OpenAI:', error);
-    throw error;
+    return 'Error communicating with OpenAI. Please try again later.';
   }
 }; 

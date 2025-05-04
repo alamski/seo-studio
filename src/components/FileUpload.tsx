@@ -9,8 +9,7 @@ import {
   Spinner,
 } from '@chakra-ui/react'
 import { useApp } from '../context/AppContext'
-import { parseCSV } from '../utils/csvParser'
-import { analyzeData } from '../services/analysisService'
+import { processCrawlData, generateAnalysis } from '../services/analysisService'
 
 const FileUpload: React.FC = () => {
   console.log('FileUpload component rendering')
@@ -25,15 +24,15 @@ const FileUpload: React.FC = () => {
       dispatch({ type: 'SET_LOADING', payload: true })
       dispatch({ type: 'CLEAR_ERROR' })
 
-      const data = await parseCSV(file)
-      dispatch({ type: 'SET_CRAWL_DATA', payload: data })
+      const crawlData = await processCrawlData(file)
+      const analysis = generateAnalysis(crawlData)
 
-      const analysis = analyzeData(data)
+      dispatch({ type: 'SET_CRAWL_DATA', payload: crawlData })
       dispatch({ type: 'SET_ANALYSIS', payload: analysis })
 
       toast({
         title: 'File uploaded successfully',
-        description: `Analyzed ${data.length} URLs`,
+        description: `Analyzed ${crawlData.length} URLs`,
         status: 'success',
         duration: 3000,
         isClosable: true,

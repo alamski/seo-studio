@@ -24,21 +24,21 @@ const Navbar = () => {
             </Link>
             <Link
               as={RouterLink}
-              to="/analysis"
-              color={location.pathname === '/analysis' ? 'blue.500' : 'gray.600'}
-              _dark={{ color: location.pathname === '/analysis' ? 'blue.300' : 'gray.300' }}
-              fontWeight="medium"
-            >
-              Analysis
-            </Link>
-            <Link
-              as={RouterLink}
               to="/chat"
               color={location.pathname === '/chat' ? 'blue.500' : 'gray.600'}
               _dark={{ color: location.pathname === '/chat' ? 'blue.300' : 'gray.300' }}
               fontWeight="medium"
             >
               Chat
+            </Link>
+            <Link
+              as={RouterLink}
+              to="/settings"
+              color={location.pathname === '/settings' ? 'blue.500' : 'gray.600'}
+              _dark={{ color: location.pathname === '/settings' ? 'blue.300' : 'gray.300' }}
+              fontWeight="medium"
+            >
+              Settings
             </Link>
           </Flex>
         </Flex>

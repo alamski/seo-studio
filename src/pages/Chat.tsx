@@ -40,6 +40,17 @@ const SUGGESTED_QUESTIONS = [
   'How can I improve my content strategy?',
 ]
 
+// Utility to summarize crawl data for GPT context
+function getCrawlDataSummary(crawlData: any[], maxRows = 10) {
+  if (!crawlData || crawlData.length === 0) return 'No crawl data available.'
+  const columns = ['Address', 'Title 1', 'Meta Description 1', 'H1-1', 'Status Code']
+  const header = columns.join(' | ')
+  const rows = crawlData.slice(0, maxRows).map(row =>
+    columns.map(col => row[col] || '').join(' | ')
+  )
+  return [header, ...rows].join('\n')
+}
+
 const Chat = () => {
   const { state, dispatch } = useApp()
   const [input, setInput] = useState('')
@@ -53,6 +64,38 @@ const Chat = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.700')
   const userBgColor = useColorModeValue('blue.50', 'blue.900')
   const aiBgColor = useColorModeValue('gray.50', 'gray.700')
+
+  const recognitionRef = useRef<any>(null)
+
+  // Voice input setup
+  useEffect(() => {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      return
+    }
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    recognitionRef.current = new SpeechRecognition()
+    recognitionRef.current.continuous = false
+    recognitionRef.current.interimResults = false
+    recognitionRef.current.lang = 'en-US'
+    recognitionRef.current.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      setInput(prev => prev ? prev + ' ' + transcript : transcript)
+      setIsRecording(false)
+    }
+    recognitionRef.current.onerror = () => {
+      setIsRecording(false)
+      toast({
+        title: 'Voice input error',
+        description: 'Could not recognize speech. Please try again.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }
+    recognitionRef.current.onend = () => {
+      setIsRecording(false)
+    }
+  }, [toast])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -72,7 +115,15 @@ const Chat = () => {
     setIsLoading(true)
 
     try {
-      const response = await sendMessage(input, state.analysis, state.crawlData)
+      // Build system prompt with crawl data summary
+      const crawlSummary = getCrawlDataSummary(state.crawlData)
+      const systemMessage: Message = {
+        role: 'system',
+        content: `You are an SEO assistant. Here is a sample of the website crawl data (showing up to 10 rows):\n${crawlSummary}`
+      }
+      // Build message history for OpenAI
+      const messages = [systemMessage, ...state.messages, userMessage]
+      const response = await sendMessage(messages)
       const aiMessage: Message = {
         role: 'assistant',
         content: response,
@@ -113,6 +164,26 @@ const Chat = () => {
       duration: 2000,
       isClosable: true,
     })
+  }
+
+  const handleMicClick = () => {
+    if (!recognitionRef.current) {
+      toast({
+        title: 'Voice input not supported',
+        description: 'Your browser does not support speech recognition.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      })
+      return
+    }
+    if (isRecording) {
+      recognitionRef.current.stop()
+      setIsRecording(false)
+    } else {
+      recognitionRef.current.start()
+      setIsRecording(true)
+    }
   }
 
   return (
@@ -252,6 +323,14 @@ const Chat = () => {
                   resize="none"
                   rows={1}
                   flex={1}
+                />
+                <IconButton
+                  aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
+                  icon={isRecording ? <Spinner size="sm" /> : <FiMic />}
+                  onClick={handleMicClick}
+                  colorScheme={isRecording ? 'red' : 'gray'}
+                  isLoading={isRecording}
+                  variant={isRecording ? 'solid' : 'outline'}
                 />
                 <Button
                   colorScheme="blue"
